@@ -1,0 +1,20 @@
+{
+  "name": "asthma-guard-dashboard",
+  "version": "1.0.0",
+  "description": "Web dashboard for Asthma Guard wearable air purifier",
+  "main": "index.html",
+  "scripts": {
+    "serve": "firebase serve --only hosting",
+    "deploy": "firebase deploy --only hosting"
+  },
+  "keywords": ["asthma", "air-quality", "wearable", "firebase"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "firebase-tools": "^11.0.0"
+  },
+  "dependencies": {
+    "chart.js": "^3.9.1",
+    "firebase": "^9.22.1"
+  }
+}

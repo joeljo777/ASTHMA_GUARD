@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>🛡️ Asthma Guard Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <h1>🛡️ Asthma Guard</h1>
+      <p>Smart Wearable Air Purifier</p>
+    </div>
+    <div id="statusBanner" class="status-banner safe">
+      <div class="status-pulse"></div>
+      <span id="statusText">Disconnected</span>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="container">
+    <!-- Connection Controls -->
+    <section class="connection-panel">
+      <div class="input-group">
+        <input id="wsUrl" type="text" placeholder="ws://192.168.1.50:81" class="input-field" />
+      </div>
+      <div class="button-group">
+        <button id="connectBtn" class="btn btn-primary">Connect</button>
+        <button id="mockBtn" class="btn btn-secondary">Mock Data (Test)</button>
+      </div>
+    </section>
+
+    <!-- Real-time Gauges -->
+    <section class="gauges-grid">
+      <!-- PM2.5 Gauge -->
+      <div class="gauge-card">
+        <div class="gauge-wrapper">
+          <svg class="gauge-svg" viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="50" class="gauge-bg"></circle>
+            <circle id="pmGauge" cx="60" cy="60" r="50" class="gauge-fill pm"></circle>
+          </svg>
+          <div class="gauge-center">
+            <div class="gauge-value" id="pmVal">—</div>
+            <div class="gauge-unit">mg/m³</div>
+          </div>
+        </div>
+        <div class="gauge-label">PM2.5</div>
+      </div>
+
+      <!-- Gas Gauge -->
+      <div class="gauge-card">
+        <div class="gauge-wrapper">
+          <svg class="gauge-svg" viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="50" class="gauge-bg"></circle>
+            <circle id="gasGauge" cx="60" cy="60" r="50" class="gauge-fill gas"></circle>
+          </svg>
+          <div class="gauge-center">
+            <div class="gauge-value" id="gasVal">—</div>
+            <div class="gauge-unit">ADC</div>
+          </div>
+        </div>
+        <div class="gauge-label">Gas (MQ-135)</div>
+      </div>
+
+      <!-- Temperature & Humidity -->
+      <div class="gauge-card">
+        <div class="gauge-wrapper">
+          <div class="combined-gauge">
+            <div class="temp-hum-item">
+              <span class="temp-hum-label">Temp</span>
+              <span class="temp-hum-value" id="tempVal">—</span>
+              <span class="temp-hum-unit">°C</span>
+            </div>
+            <div class="divider"></div>
+            <div class="temp-hum-item">
+              <span class="temp-hum-label">Humidity</span>
+              <span class="temp-hum-value" id="humVal">—</span>
+              <span class="temp-hum-unit">%</span>
+            </div>
+          </div>
+        </div>
+        <div class="gauge-label">Climate (DHT22)</div>
+      </div>
+
+      <!-- Fan Speed Control -->
+      <div class="gauge-card">
+        <div class="gauge-wrapper">
+          <svg class="gauge-svg" viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="50" class="gauge-bg"></circle>
+            <circle id="fanGauge" cx="60" cy="60" r="50" class="gauge-fill fan"></circle>
+          </svg>
+          <div class="gauge-center">
+            <div class="gauge-value" id="fanVal">—</div>
+            <div class="gauge-unit">%</div>
+          </div>
+        </div>
+        <div class="gauge-label">Fan Speed</div>
+      </div>
+    </section>
+
+    <!-- Manual Fan Control -->
+    <section class="control-section">
+      <h3>Manual Fan Control</h3>
+      <div class="slider-wrapper">
+        <label>Fan Speed:</label>
+        <input id="fanSlider" type="range" min="0" max="100" value="0" class="slider" />
+        <span id="sliderValue">0%</span>
+      </div>
+      <div class="control-buttons">
+        <button id="autoBtn" class="btn btn-auto active">Auto Mode</button>
+        <button id="manualBtn" class="btn btn-manual">Manual Mode</button>
+      </div>
+    </section>
+
+    <!-- Historical Chart -->
+    <section class="chart-section">
+      <h3>PM2.5 Trend (Last 30 Readings)</h3>
+      <canvas id="pmChart" height="80"></canvas>
+    </section>
+
+    <!-- State & Alerts -->
+    <section class="state-section">
+      <div class="state-card">
+        <span class="state-label">Current State:</span>
+        <span id="stateDisplay" class="state-value safe">SAFE</span>
+      </div>
+      <div class="alert-box" id="alertBox" style="display:none;">
+        <span id="alertText"></span>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>Last update: <span id="lastUpdate">—</span></p>
+    <p>❤️ Breathe easy. Stay safe.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
