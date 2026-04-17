@@ -4,8 +4,8 @@ body {
   font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
   margin: 0;
   padding: 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #0b1220;
+  background: linear-gradient(135deg, #000000 0%, #0a0e27 100%);
+  color: #e0e0e0;
   min-height: 100vh;
 }
 
@@ -14,9 +14,9 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 20px 24px;
-  background: rgba(11, 18, 32, 0.95);
+  background: linear-gradient(90deg, #0a0e27 0%, #000000 100%);
   color: #fff;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 12px rgba(0,255,136,0.1);
 }
 
 .header-left h1 {
@@ -43,18 +43,21 @@ body {
 }
 
 .status-banner.safe {
-  background: rgba(30, 126, 52, 0.8);
-  color: #4ade80;
+  background: rgba(0, 255, 136, 0.15);
+  color: #00ff88;
+  border: 1px solid #00ff88;
 }
 
 .status-banner.warn {
-  background: rgba(253, 126, 20, 0.8);
-  color: #fbbf24;
+  background: rgba(255, 165, 0, 0.15);
+  color: #ffa500;
+  border: 1px solid #ffa500;
 }
 
 .status-banner.danger {
-  background: rgba(220, 53, 69, 0.8);
-  color: #fca5a5;
+  background: rgba(255, 0, 0, 0.15);
+  color: #ff4444;
+  border: 1px solid #ff4444;
   animation: pulse-danger 1s infinite;
 }
 
@@ -98,9 +101,9 @@ body {
 .input-field {
   width: 100%;
   padding: 12px 14px;
-  border: 2px solid rgba(255,255,255,0.3);
+  border: 2px solid rgba(0, 255, 136, 0.3);
   border-radius: 8px;
-  background: rgba(255,255,255,0.1);
+  background: rgba(0, 255, 136, 0.05);
   color: #fff;
   font-size: 14px;
   transition: all 0.3s ease;
@@ -108,8 +111,9 @@ body {
 
 .input-field:focus {
   outline: none;
-  border-color: #667eea;
-  background: rgba(255,255,255,0.15);
+  border-color: #00ff88;
+  background: rgba(0, 255, 136, 0.1);
+  box-shadow: 0 0 12px rgba(0, 255, 136, 0.3);
 }
 
 .input-field::placeholder {
@@ -134,8 +138,9 @@ body {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
+  background: linear-gradient(135deg, #00ff88, #ffff00);
+  color: #000;
+  font-weight: 600;
 }
 
 .btn-primary:hover {
@@ -161,7 +166,8 @@ body {
 }
 
 .btn-auto.active, .btn-manual.active {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #00ff88, #ffff00);
+  color: #000;
   border-color: transparent;
 }
 
@@ -174,10 +180,11 @@ body {
 }
 
 .gauge-card {
-  background: rgba(255,255,255,0.95);
+  background: linear-gradient(135deg, rgba(10, 14, 39, 0.95), rgba(20, 28, 55, 0.95));
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  box-shadow: 0 8px 24px rgba(0,255,136,0.15);
+  border: 1px solid rgba(0, 255, 136, 0.2);
   text-align: center;
   transition: all 0.3s ease;
 }
@@ -204,24 +211,32 @@ body {
   stroke-width: 6;
 }
 
+/* Gradient background arc - always shows full Green->Yellow->Red */
+.gauge-gradient-bg {
+  fill: none;
+  stroke: url(#arcGradient);
+  stroke-width: 6;
+  opacity: 0.4;
+}
+
 .gauge-fill {
   fill: none;
   stroke-width: 6;
   stroke-linecap: round;
   stroke-dashoffset: 0;
-  transition: stroke-dashoffset 0.4s ease;
+  transition: stroke-dashoffset 0.4s ease, stroke 0.2s ease;
 }
 
 .gauge-fill.pm {
-  stroke: #667eea;
+  stroke: #00ff88;
 }
 
 .gauge-fill.gas {
-  stroke: #f59e0b;
+  stroke: #ffff00;
 }
 
 .gauge-fill.fan {
-  stroke: #10b981;
+  stroke: #00ff88;
 }
 
 .gauge-center {
@@ -235,7 +250,7 @@ body {
 .gauge-value {
   font-size: 24px;
   font-weight: 700;
-  color: #0b1220;
+  color: #00ff88;
 }
 
 .gauge-unit {
@@ -247,7 +262,7 @@ body {
 .gauge-label {
   font-size: 13px;
   font-weight: 600;
-  color: #555;
+  color: #00ff88;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -258,7 +273,7 @@ body {
   align-items: center;
   justify-content: space-around;
   padding: 30px 10px;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.08), rgba(255, 255, 0, 0.08));
   border-radius: 8px;
 }
 
@@ -270,19 +285,19 @@ body {
 
 .temp-hum-label {
   font-size: 11px;
-  color: #888;
+  color: #00ff88;
   text-transform: uppercase;
 }
 
 .temp-hum-value {
   font-size: 20px;
   font-weight: 700;
-  color: #0b1220;
+  color: #00d4ff;
 }
 
 .temp-hum-unit {
   font-size: 12px;
-  color: #bbb;
+  color: #888;
 }
 
 .divider {
@@ -293,17 +308,18 @@ body {
 
 /* Control Section */
 .control-section {
-  background: rgba(255,255,255,0.95);
+  background: linear-gradient(135deg, rgba(10, 14, 39, 0.95), rgba(20, 28, 55, 0.95));
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 24px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  box-shadow: 0 8px 24px rgba(0,255,136,0.15);
+  border: 1px solid rgba(0, 255, 136, 0.2);
 }
 
 .control-section h3 {
   margin: 0 0 16px 0;
   font-size: 16px;
-  color: #0b1220;
+  color: #00d4ff;
 }
 
 .slider-wrapper {
@@ -315,7 +331,7 @@ body {
 
 .slider-wrapper label {
   font-weight: 600;
-  color: #555;
+  color: #00ff88;
   min-width: 80px;
 }
 
@@ -335,9 +351,9 @@ body {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #00ff88, #ffff00);
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 2px 12px rgba(0, 255, 136, 0.6);
   transition: all 0.2s ease;
 }
 
@@ -350,16 +366,16 @@ body {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #00ff88, #ffff00);
   cursor: pointer;
   border: none;
-  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 2px 12px rgba(0, 255, 136, 0.6);
   transition: all 0.2s ease;
 }
 
 #sliderValue {
   font-weight: 700;
-  color: #667eea;
+  color: #00ff88;
   min-width: 40px;
   text-align: right;
 }
@@ -371,17 +387,18 @@ body {
 
 /* Chart Section */
 .chart-section {
-  background: rgba(255,255,255,0.95);
+  background: linear-gradient(135deg, rgba(10, 14, 39, 0.95), rgba(20, 28, 55, 0.95));
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 24px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  box-shadow: 0 8px 24px rgba(0,255,136,0.15);
+  border: 1px solid rgba(0, 212, 255, 0.2);
 }
 
 .chart-section h3 {
   margin: 0 0 16px 0;
   font-size: 16px;
-  color: #0b1220;
+  color: #00d4ff;
 }
 
 #pmChart {
@@ -397,10 +414,11 @@ body {
 }
 
 .state-card {
-  background: rgba(255,255,255,0.95);
+  background: linear-gradient(135deg, rgba(10, 14, 39, 0.95), rgba(20, 28, 55, 0.95));
   border-radius: 12px;
   padding: 16px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  box-shadow: 0 8px 24px rgba(0,255,136,0.15);
+  border: 1px solid rgba(0, 255, 136, 0.2);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -408,7 +426,7 @@ body {
 
 .state-label {
   font-weight: 600;
-  color: #555;
+  color: #00ff88;
 }
 
 .state-value {
@@ -420,28 +438,31 @@ body {
 }
 
 .state-value.safe {
-  background: #d1fae5;
-  color: #065f46;
+  background: rgba(0, 255, 136, 0.15);
+  color: #00ff88;
+  border: 1px solid #00ff88;
 }
 
 .state-value.warn {
-  background: #fef3c7;
-  color: #92400e;
+  background: rgba(255, 255, 0, 0.15);
+  color: #ffff00;
+  border: 1px solid #ffff00;
 }
 
 .state-value.danger {
-  background: #fee2e2;
-  color: #991b1b;
+  background: rgba(255, 0, 0, 0.15);
+  color: #ff4444;
+  border: 1px solid #ff4444;
   animation: pulse-danger 1s infinite;
 }
 
 .alert-box {
-  background: rgba(255,255,255,0.95);
+  background: linear-gradient(135deg, rgba(10, 14, 39, 0.95), rgba(20, 28, 55, 0.95));
   border-radius: 12px;
   padding: 16px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-  border-left: 4px solid #dc3545;
-  color: #8b0000;
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.15);
+  border: 1px solid #ef4444;
+  color: #ff6b6b;
   font-weight: 600;
   animation: slideIn 0.3s ease;
 }
@@ -455,7 +476,7 @@ body {
 .footer {
   text-align: center;
   padding: 20px;
-  color: rgba(255,255,255,0.8);
+  color: rgba(243,244,246,0.7);
   font-size: 12px;
 }
 

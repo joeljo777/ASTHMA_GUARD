@@ -77,15 +77,25 @@ function getStateColor(state) {
   return 'safe';
 }
 
-// Animate circular gauge
+// Determine gauge color based on percentage (Green -> Yellow -> Red)
+function getGaugeColor(percentage) {
+  if (percentage < 33) return '#00ff88'; // Green - Safe
+  if (percentage < 66) return '#ffff00'; // Yellow - Warning
+  return '#ff4444'; // Red - Danger
+}
+
+// Animate circular gauge with gradient background
 function animateGauge(circleId, percentage, maxPercentage = 100) {
   const circle = document.getElementById(circleId);
   if (circle) {
     const circumference = 2 * Math.PI * 50; // radius=50
-    const angle = (360 * percentage) / maxPercentage;
+    const normalizedPercentage = (percentage / maxPercentage) * 100;
+    const angle = (360 * normalizedPercentage) / 100;
     const offset = circumference * (1 - angle / 360);
     circle.style.strokeDasharray = circumference;
     circle.style.strokeDashoffset = offset;
+    // Update progress fill color but keep it visible against gradient
+    circle.style.stroke = getGaugeColor(normalizedPercentage);
   }
 }
 
@@ -104,16 +114,29 @@ function updateUI(data) {
   const state = data.state || getState(pm, gas);
 
   // Update gauge values
-  document.getElementById('pmVal').textContent = pm.toFixed(2);
-  document.getElementById('gasVal').textContent = gas;
+  const pmValEl = document.getElementById('pmVal');
+  const gasValEl = document.getElementById('gasVal');
+  const fanValEl = document.getElementById('fanVal');
+  
+  pmValEl.textContent = pm.toFixed(2);
+  gasValEl.textContent = gas;
   document.getElementById('tempVal').textContent = !isNaN(temp) ? temp.toFixed(1) : '—';
   document.getElementById('humVal').textContent = !isNaN(hum) ? hum.toFixed(0) : '—';
-  document.getElementById('fanVal').textContent = fan;
+  fanValEl.textContent = fan;
 
-  // Animate gauges
+  // Animate gauges with dynamic colors
   animateGauge('pmGauge', pm, 1.0);
   animateGauge('gasGauge', gas, 2000);
   animateGauge('fanGauge', fan, 100);
+  
+  // Update gauge value colors dynamically
+  const pmColor = getGaugeColor((pm / 1.0) * 100);
+  const gasColor = getGaugeColor((gas / 2000) * 100);
+  const fanColor = getGaugeColor(fan);
+  
+  pmValEl.style.color = pmColor;
+  gasValEl.style.color = gasColor;
+  fanValEl.style.color = fanColor;
 
   // Update state display
   const stateEl = document.getElementById('stateDisplay');
