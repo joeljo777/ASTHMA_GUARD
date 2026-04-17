@@ -485,6 +485,121 @@ body {
 }
 
 /* Responsive Design */
+/* Analytics Dashboard */
+.analytics-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.analytics-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #00d4ff;
+}
+
+.time-range-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-range {
+  padding: 8px 12px;
+  background: rgba(0, 255, 136, 0.1);
+  color: #00ff88;
+  border: 1px solid rgba(0, 255, 136, 0.3);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.btn-range:hover {
+  background: rgba(0, 255, 136, 0.2);
+  border-color: #00ff88;
+}
+
+.btn-range.active {
+  background: linear-gradient(135deg, #00ff88, #ffff00);
+  color: #000;
+  border-color: transparent;
+}
+
+/* Statistics Cards */
+.analytics-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: linear-gradient(135deg, rgba(10, 14, 39, 0.95), rgba(20, 28, 55, 0.95));
+  border: 1px solid rgba(0, 255, 136, 0.2);
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,255,136,0.1);
+}
+
+.stat-label {
+  display: block;
+  font-size: 11px;
+  color: #00ff88;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.stat-value {
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
+  color: #00d4ff;
+}
+
+.chart-info {
+  text-align: center;
+  color: #888;
+  font-size: 12px;
+  margin-top: 12px;
+  margin-bottom: 0;
+}
+
+/* Responsive Analytics */
+@media (max-width: 768px) {
+  .analytics-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .time-range-buttons {
+    width: 100%;
+  }
+
+  .btn-range {
+    flex: 1;
+  }
+
+  .analytics-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .analytics-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-card {
+    padding: 10px;
+  }
+}
+
 @media (max-width: 768px) {
   .header {
     flex-direction: column;

@@ -8,269 +8,288 @@
   - GP2Y1010 (ADC35/GPIO35) - PM2.5 dust
   - MQ-135 (ADC34/GPIO34) - Gas quality
   - IRLZ44N (GPIO18 PWM) - Fan control
-  
-  See HARDWARE_WIRING.md for pin assignments.
 */
 
 #include <WiFi.h>
-#include <AsyncWebSocket.h>
-#include <ESPAsyncWebServer.h>
+#include <WebSocketsServer.h>
 #include <DHT.h>
+#include <WebServer.h>
 
-// WiFi Configuration (UPDATE THESE)
-#define SSID "YOUR_WIFI_SSID"
-#define PASSWORD "YOUR_WIFI_PASSWORD"
+// WiFi Credentials
+const char* ssid = "DIC2026 - 1350";
+const char* password = "DIC@2026";
 
-// Pin Configuration
-#define DHT_PIN 4
-#define DUST_SENSOR_PIN 35       // ADC1_CH7
-#define GAS_SENSOR_PIN 34        // ADC1_CH6
-#define FAN_PIN 18               // PWM
-#define DHT_TYPE DHT22
+// PIN DEFINITIONS
+#define DHTPIN 4
+#define DHTTYPE DHT22
+#define MQ135_PIN 35
+#define DUST_VO_PIN 34
+#define DUST_LED_PIN 25
+#define FAN_CTRL_PIN 18
+#define BUZZER_PIN 23
 
-// Sensor Objects
-DHT dht(DHT_PIN, DHT_TYPE);
+DHT dht(DHTPIN, DHTTYPE);
+WebSocketsServer webSocket = WebSocketsServer(81);
+WebServer server(80);  // HTTP server on port 80
 
-// Web Server
-AsyncWebServer server(80);
-AsyncWebSocket ws("/ws");
+// Sensor Variables
+const int samplingTime = 280;
+const int deltaTime    = 40;
+const int sleepTime    = 9680;
+float dustBaseline = 0.0;
+unsigned long lastReadTime = 0;
+unsigned long lastBuzzerTime = 0;
+const unsigned long sensorInterval = 1000;
+const unsigned long buzzerInterval = 300;
+String currentAirStatus = "UNKNOWN";
 
-// Global Variables
+// Store current readings
 float currentTemp = 0;
 float currentHum = 0;
-float currentPM = 0;
+float currentDust = 0;
 int currentGas = 0;
-int currentFan = 0;
-bool manualMode = false;
 
-// State Machine Thresholds
-const float PM_MODERATE = 0.05;
-const float PM_DANGER = 0.15;
-const int GAS_MODERATE = 800;
-const int GAS_DANGER = 1800;
+// Control Functions
+void fanOn() { digitalWrite(FAN_CTRL_PIN, LOW); }
+void fanOff() { digitalWrite(FAN_CTRL_PIN, HIGH); }
+void buzzerOn() { digitalWrite(BUZZER_PIN, HIGH); }
+void buzzerOff() { digitalWrite(BUZZER_PIN, LOW); }
 
-// Function Prototypes
-void initWiFi();
-void initWebSocket();
-void handleWebSocketMessage(void *arg, uint8_t *data, size_t len);
-void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
-void readSensors();
-float readPM25();
-int readGas();
-String getAirQualityState(float pm, int gas);
-void broadcastSensorData();
-void setFanSpeed(int speed);
+float readDustVoltage() {
+  digitalWrite(DUST_LED_PIN, LOW);
+  delayMicroseconds(samplingTime);
+  int raw = analogRead(DUST_VO_PIN);
+  delayMicroseconds(deltaTime);
+  digitalWrite(DUST_LED_PIN, HIGH);
+  delayMicroseconds(sleepTime);
+  return raw * (3.3 / 4095.0);
+}
 
-// PWM Setup
-const int PWM_FREQUENCY = 5000;
-const int PWM_RESOLUTION = 8;  // 0-255
-
-// Setup
 void setup() {
   Serial.begin(115200);
-  delay(1000);
-  
-  Serial.println("\n\nAsthma Guard - ESP32 Starting...");
-  
-  // Initialize DHT sensor
+  delay(2000);
+
+  Serial.println("\n\n========== ASTHMA GUARD STARTUP ==========");
+
+  // --- Sensor Initialization ---
   dht.begin();
-  
-  // Initialize fan PWM
-  ledcSetup(0, PWM_FREQUENCY, PWM_RESOLUTION);
-  ledcAttachPin(FAN_PIN, 0);
-  ledcWrite(0, 0);  // Start with fan off
-  
-  // Initialize ADC for dust and gas sensors
-  analogSetWidth(12);  // 12-bit ADC
-  analogSetClockDiv(1);
-  
-  // WiFi Setup
-  initWiFi();
-  
-  // WebSocket Setup
-  initWebSocket();
-  
-  // Simple HTTP server info page
-  server.on("/", HTTP_GET, [](AsyncServerRequest *request) {
-    request->send(200, "text/html", 
-      "<h1>Asthma Guard ESP32</h1>"
-      "<p>WebSocket: ws://ESP_IP/ws</p>"
-      "<p>Fan Speed: 0-100%</p>"
-      "<p>Status: Connected</p>");
-  });
-  
-  server.begin();
-  Serial.println("HTTP Server started");
-}
+  pinMode(DUST_LED_PIN, OUTPUT);
+  digitalWrite(DUST_LED_PIN, HIGH);
+  pinMode(FAN_CTRL_PIN, OUTPUT);
+  fanOff();
+  pinMode(BUZZER_PIN, OUTPUT);
+  buzzerOff();
+  analogReadResolution(12);
 
-// Main Loop
-void loop() {
-  // Read sensors every 2 seconds
-  static unsigned long lastRead = 0;
-  if (millis() - lastRead > 2000) {
-    readSensors();
-    broadcastSensorData();
-    lastRead = millis();
+  Serial.println("1. Sensors initialized");
+
+  float sum = 0.0;
+  for (int i = 0; i < 20; i++) {
+    sum += readDustVoltage();
+    delay(50);
   }
-  
-  delay(100);
-}
+  dustBaseline = sum / 20.0;
+  Serial.println("2. Dust baseline calibrated");
 
-// Initialize WiFi
-void initWiFi() {
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(SSID, PASSWORD);
+  // --- WiFi Setup ---
+  Serial.print("3. Connecting to WiFi: ");
+  Serial.println(ssid);
+  
+  WiFi.setTxPower(WIFI_POWER_11dBm);
+  WiFi.begin(ssid, password);
   
   int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+  while (WiFi.status() != WL_CONNECTED && attempts < 30) {
     delay(500);
     Serial.print(".");
     attempts++;
   }
+  Serial.println("");
   
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("\nWiFi connected!");
-    Serial.print("IP Address: ");
+    Serial.print("4. WiFi connected! IP: ");
     Serial.println(WiFi.localIP());
   } else {
-    Serial.println("\nFailed to connect to WiFi!");
+    Serial.println("ERROR: WiFi connection failed!");
+    return;
   }
+
+  // --- WebSocket Setup ---
+  webSocket.begin();
+  Serial.println("5. WebSocket ready (port 81)");
+
+  // --- HTTP Server Setup ---
+  server.on("/", handleRoot);
+  server.on("/api/data", handleData);
+  server.on("/api/data", HTTP_OPTIONS, handleCORS);  // Preflight CORS request
+  server.on("/", HTTP_OPTIONS, handleCORS);           // Preflight CORS for root
+  server.begin();
+  Serial.println("6. HTTP server ready (port 80)");
+
+  Serial.println("\n========== SUCCESS ==========");
+  Serial.print("OPEN BROWSER: http://");
+  Serial.println(WiFi.localIP());
+  Serial.println("=========================================\n");
 }
 
-// Initialize WebSocket
-void initWebSocket() {
-  ws.onEvent(onWsEvent);
-  server.addHandler(&ws);
-  Serial.println("WebSocket server initialized at /ws");
+// CORS Handler - Allow cross-origin requests from Firebase
+void handleCORS() {
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
+  server.send(204);
 }
 
-// WebSocket Event Handler
-void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
-  switch (type) {
-    case WS_EVT_CONNECT:
-      Serial.printf("Client %u connected\n", client->id());
-      broadcastSensorData();  // Send immediate data
-      break;
-    case WS_EVT_DISCONNECT:
-      Serial.printf("Client %u disconnected\n", client->id());
-      break;
-    case WS_EVT_DATA:
-      handleWebSocketMessage(arg, data, len);
-      break;
-    case WS_EVT_PONG:
-    case WS_EVT_ERROR:
-      break;
-  }
+// HTML Dashboard Handler - SIMPLIFIED
+void handleRoot() {
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.sendHeader("Content-Type", "text/html; charset=utf-8");
+  server.send(200, "text/html", getHTML());
 }
 
-// Handle WebSocket Messages
-void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
-  AwsFrameInfo *info = (AwsFrameInfo *)arg;
-  if (info->final && info->index == 0 && info->len == len && len > 0) {
-    data[len] = 0;  // Null terminate
-    String msg = (char *)data;
-    
-    Serial.printf("Received: %s\n", msg.c_str());
-    
-    // Parse fan speed command: {"fan": 50}
-    if (msg.indexOf("\"fan\":") != -1) {
-      int fanSpeed = msg.substring(msg.indexOf("\"fan\":") + 6).toInt();
-      fanSpeed = constrain(fanSpeed, 0, 100);
-      setFanSpeed(fanSpeed);
-      manualMode = true;
-      Serial.printf("Fan speed set to: %d%%\n", fanSpeed);
-    }
-  }
+String getHTML() {
+  String html = "<!DOCTYPE html>";
+  html += "<html><head>";
+  html += "<meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>";
+  html += "<title>Asthma Guard</title>";
+  html += "<style>";
+  html += "body{background:#0a0e27;color:#00ff88;font-family:Arial;margin:0;padding:20px}";
+  html += ".container{max-width:1200px;margin:0 auto}";
+  html += "h1{text-align:center;color:#00d4ff}";
+  html += ".gauges{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:15px;margin:20px 0}";
+  html += ".gauge{background:rgba(0,255,136,0.1);border:1px solid #00ff88;padding:15px;text-align:center;border-radius:8px}";
+  html += ".value{font-size:28px;color:#00ff88;font-weight:bold}";
+  html += ".label{font-size:12px;color:#888;margin-top:8px}";
+  html += "#status{text-align:center;padding:10px;background:rgba(0,255,136,0.2);margin:10px 0;border-radius:5px;font-weight:bold}";
+  html += "</style></head><body>";
+  html += "<div class='container'>";
+  html += "<h1>Shield Asthma Guard</h1>";
+  html += "<div id='status'>Connecting...</div>";
+  html += "<div class='gauges'>";
+  html += "<div class='gauge'><div class='value' id='temp'>-</div><div class='label'>Temp (C)</div></div>";
+  html += "<div class='gauge'><div class='value' id='hum'>-</div><div class='label'>Humidity (%)</div></div>";
+  html += "<div class='gauge'><div class='value' id='mq'>-</div><div class='label'>Gas</div></div>";
+  html += "<div class='gauge'><div class='value' id='dust'>-</div><div class='label'>Dust (mg/m3)</div></div>";
+  html += "<div class='gauge'><div class='value' id='status_val'>-</div><div class='label'>Status</div></div>";
+  html += "</div></div>";
+  html += "<script>";
+  html += "function upd(d){document.getElementById('temp').textContent=(d.temp||0).toFixed(1);document.getElementById('hum').textContent=(d.hum||0).toFixed(0);document.getElementById('mq').textContent=d.mq||0;document.getElementById('dust').textContent=(d.dust||0).toFixed(2);document.getElementById('status_val').textContent=d.status||'?'}";
+  html += "function poll(){fetch('/api/data').then(r=>r.json()).then(d=>{upd(d);document.getElementById('status').textContent='✓ Live';setTimeout(poll,1000)}).catch(e=>{document.getElementById('status').textContent='✗ Error';setTimeout(poll,3000)})}";
+  html += "poll();";
+  html += "</script>";
+  html += "</body></html>";
+  return html;
 }
 
-// Read All Sensors
-void readSensors() {
-  // Read DHT22
-  float h = dht.readHumidity();
-  float t = dht.readTemperature();
-  
-  if (!isnan(h) && !isnan(t)) {
-    currentHum = h;
-    currentTemp = t;
-  } else {
-    Serial.println("DHT22 read error!");
-  }
-  
-  // Read PM2.5 (Dust Sensor)
-  currentPM = readPM25();
-  
-  // Read Gas Sensor (MQ-135)
-  currentGas = readGas();
-  
-  // Auto fan control if not in manual mode
-  if (!manualMode) {
-    String state = getAirQualityState(currentPM, currentGas);
-    if (state == "DANGER") {
-      setFanSpeed(100);
-    } else if (state == "WARNING") {
-      setFanSpeed(60);
-    } else {
-      setFanSpeed(20);
-    }
-  }
-  
-  Serial.printf("T:%.1f H:%.0f PM:%.3f G:%d Fan:%d%%\n", currentTemp, currentHum, currentPM, currentGas, currentFan);
-}
-
-// Read PM2.5 from GP2Y1010
-float readPM25() {
-  // Sample the sensor 10 times
-  float sum = 0;
-  for (int i = 0; i < 10; i++) {
-    int val = analogRead(DUST_SENSOR_PIN);
-    sum += val;
-    delay(10);
-  }
-  float avgVal = sum / 10.0;
-  
-  // Convert ADC to voltage (12-bit, 3.3V reference)
-  float voltage = (avgVal / 4095.0) * 3.3;
-  
-  // GP2Y1010 formula: mg/m³ = (V - 0.0356) / 0.01
-  float pm25 = max(0.0, (voltage - 0.0356) / 0.01);
-  
-  return pm25;
-}
-
-// Read Gas Sensor (MQ-135)
-int readGas() {
-  int val = analogRead(GAS_SENSOR_PIN);
-  return val;  // Raw ADC value (0-4095)
-}
-
-// Determine Air Quality State
-String getAirQualityState(float pm, int gas) {
-  if (pm > PM_DANGER || gas > GAS_DANGER) return "DANGER";
-  if (pm > PM_MODERATE || gas > GAS_MODERATE) return "WARNING";
-  return "SAFE";
-}
-
-// Set Fan Speed (PWM 0-100)
-void setFanSpeed(int speed) {
-  speed = constrain(speed, 0, 100);
-  currentFan = speed;
-  int pwmValue = map(speed, 0, 100, 0, 255);
-  ledcWrite(0, pwmValue);
-}
-
-// Broadcast Sensor Data via WebSocket
-void broadcastSensorData() {
-  String state = getAirQualityState(currentPM, currentGas);
+// JSON API Handler
+void handleData() {
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.sendHeader("Content-Type", "application/json");
   
   String json = "{";
-  json += "\"pm\":" + String(currentPM, 3) + ",";
-  json += "\"gas\":" + String(currentGas) + ",";
   json += "\"temp\":" + String(currentTemp, 1) + ",";
-  json += "\"hum\":" + String(currentHum, 0) + ",";
-  json += "\"fan\":" + String(currentFan) + ",";
-  json += "\"state\":\"" + state + "\"";
+  json += "\"hum\":" + String(currentHum, 1) + ",";
+  json += "\"mq\":" + String(currentGas) + ",";
+  json += "\"dust\":" + String(currentDust, 3) + ",";
+  json += "\"status\":\"" + currentAirStatus + "\"";
   json += "}";
+  server.send(200, "application/json", json);
+}
+
+void loop() {
+  webSocket.loop(); // Required for WebSocket communication
+  server.handleClient(); // Handle HTTP requests
+
+  unsigned long now = millis();
+  if (now - lastReadTime < sensorInterval) return;
+  lastReadTime = now;
+
+  // Sensor Reading Logic
+  float humidity = dht.readHumidity();
+  float temperature = dht.readTemperature();
   
-  ws.textAll(json);
+  // FIX: Replace NaN with 0 to ensure valid JSON
+  if (isnan(temperature)) temperature = 0;
+  if (isnan(humidity)) humidity = 0;
+  
+  // Store for API access
+  currentTemp = temperature;
+  currentHum = humidity;
+  
+  int mq135Raw = analogRead(MQ135_PIN);
+  currentGas = mq135Raw;
+  
+  float mq135Voltage = mq135Raw * (3.3 / 4095.0);
+  float dustVoltage = readDustVoltage();
+  float dustDelta = dustVoltage - dustBaseline;
+  if (dustDelta < 0) dustDelta = 0;
+  float dustDensity = dustDelta * 0.17;
+  
+  // Store for API access
+  currentDust = dustDensity;
+
+  String mqStatus;
+  String dustStatus;
+  String comfortStatus;
+
+  // Status Logic
+  if (mq135Raw < 1500) mqStatus = "GOOD";
+  else if (mq135Raw < 2500) mqStatus = "MODERATE";
+  else mqStatus = "POOR";
+
+  if (dustVoltage < (dustBaseline + 0.05)) dustStatus = "GOOD";
+  else if (dustVoltage < (dustBaseline + 0.20)) dustStatus = "MODERATE";
+  else dustStatus = "POOR";
+
+  if (temperature > 0 && humidity > 0) {
+    if (temperature >= 20 && temperature <= 30 && humidity >= 40 && humidity <= 60) comfortStatus = "COMFORTABLE";
+    else comfortStatus = "NOT COMFORTABLE";
+  } else comfortStatus = "DHT ERROR";
+
+  if (mqStatus == "POOR" || dustStatus == "POOR") {
+    currentAirStatus = "POOR AIR QUALITY";
+    fanOn();
+    if (now - lastBuzzerTime >= buzzerInterval) {
+      buzzerOn(); delay(100); buzzerOff();
+      lastBuzzerTime = now;
+    }
+  } else if (mqStatus == "MODERATE" || dustStatus == "MODERATE") {
+    currentAirStatus = "MODERATE AIR QUALITY";
+    fanOn();
+    buzzerOff();
+  } else {
+    currentAirStatus = "GOOD AIR QUALITY";
+    fanOff();
+    buzzerOff();
+  }
+
+  // --- BROADCAST DATA TO WEBAPP (Always valid JSON) ---
+  String jsonPayload = "{";
+  jsonPayload += "\"temp\":" + String(temperature, 1) + ",";
+  jsonPayload += "\"hum\":" + String(humidity, 1) + ",";
+  jsonPayload += "\"mq\":" + String(mq135Raw) + ",";
+  jsonPayload += "\"dust\":" + String(dustDensity, 3) + ",";
+  jsonPayload += "\"status\":\"" + currentAirStatus + "\"";
+  jsonPayload += "}";
+  
+  // FIX: Use correct WebSocketsServer broadcast format
+  webSocket.broadcastTXT((uint8_t *) jsonPayload.c_str(), jsonPayload.length());
+
+  // Serial Output
+  Serial.println("\n========== SENSOR READINGS ==========");
+  if (temperature == 0 || humidity == 0) {
+    Serial.println("DHT22: Failed to read from sensor");
+  } else {
+    Serial.print("Temperature: "); Serial.print(temperature, 1); Serial.println(" C");
+    Serial.print("Humidity: "); Serial.print(humidity, 1); Serial.println(" %");
+    Serial.print("Room Status: "); Serial.println(comfortStatus);
+  }
+  Serial.print("MQ-135 Raw: "); Serial.print(mq135Raw);
+  Serial.print(" | Air Quality: "); Serial.println(mqStatus);
+  Serial.print("Dust Voltage: "); Serial.print(dustVoltage, 3);
+  Serial.print(" | Level: "); Serial.println(dustStatus);
+  Serial.print("Overall Air Status: "); Serial.println(currentAirStatus);
+  Serial.print("JSON Broadcast: "); Serial.println(jsonPayload);
+  Serial.println("=====================================");
 }
 

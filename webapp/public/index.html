@@ -28,7 +28,7 @@
     <!-- Connection Controls -->
     <section class="connection-panel">
       <div class="input-group">
-        <input id="wsUrl" type="text" placeholder="ws://192.168.1.50:81" class="input-field" />
+        <input id="wsUrl" type="text" placeholder="http://172.18.100.152" class="input-field" />
       </div>
       <div class="button-group">
         <button id="connectBtn" class="btn btn-primary">Connect</button>
@@ -146,6 +146,34 @@
     <section class="chart-section">
       <h3>PM2.5 Trend (Last 30 Readings)</h3>
       <canvas id="pmChart" height="80"></canvas>
+    </section>
+
+    <!-- Firestore Historical Dashboard -->
+    <section class="chart-section">
+      <div class="analytics-header">
+        <h3>📊 Historical Analytics</h3>
+        <div class="time-range-buttons">
+          <button class="btn btn-range active" data-range="24h">24h</button>
+          <button class="btn btn-range" data-range="7d">7d</button>
+          <button class="btn btn-range" data-range="30d">30d</button>
+        </div>
+      </div>
+      <div class="analytics-stats">
+        <div class="stat-card">
+          <span class="stat-label">Average PM2.5</span>
+          <span class="stat-value" id="avgPM">—</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Peak PM2.5</span>
+          <span class="stat-value" id="peakPM">—</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Min PM2.5</span>
+          <span class="stat-value" id="minPM">—</span>
+        </div>
+      </div>
+      <canvas id="analyticsChart" height="100"></canvas>
+      <p class="chart-info" id="chartInfo">Loading historical data...</p>
     </section>
 
     <!-- State & Alerts -->
