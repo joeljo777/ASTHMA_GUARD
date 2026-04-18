@@ -1,19 +1,18 @@
 /*
-  Asthma Guard - ESP32 Firmware
+  Asthma Guard - ESP32 Firmware (Mock Data Version)
   
-  Real-time air quality monitoring with WebSocket broadcasting
+  Real-time air quality monitoring with WiFi & HTTP API
   
-  Sensors:
+  Sensors (Mock):
   - DHT22 (GPIO4) - Temperature & Humidity
-  - GP2Y1010 (ADC35/GPIO35) - PM2.5 dust
-  - MQ-135 (ADC34/GPIO34) - Gas quality
+  - MQ-135 (ADC35/GPIO35) - Gas quality
+  - GP2Y1010 (ADC34/GPIO34) - PM2.5 dust
   - IRLZ44N (GPIO18 PWM) - Fan control
 */
 
 #include <WiFi.h>
-#include <WebSocketsServer.h>
-#include <DHT.h>
 #include <WebServer.h>
+#include <DHT.h>
 
 // WiFi Credentials
 const char* ssid = "DIC2026 - 1350";
@@ -28,26 +27,32 @@ const char* password = "DIC@2026";
 #define FAN_CTRL_PIN 18
 #define BUZZER_PIN 23
 
+// WiFi Credentials
+const char* ssid = "DIC2026 - 1350";
+const char* password = "DIC@2026";
+
 DHT dht(DHTPIN, DHTTYPE);
-WebSocketsServer webSocket = WebSocketsServer(81);
 WebServer server(80);  // HTTP server on port 80
 
 // Sensor Variables
 const int samplingTime = 280;
 const int deltaTime    = 40;
 const int sleepTime    = 9680;
-float dustBaseline = 0.0;
-unsigned long lastReadTime = 0;
-unsigned long lastBuzzerTime = 0;
-const unsigned long sensorInterval = 1000;
-const unsigned long buzzerInterval = 300;
-String currentAirStatus = "UNKNOWN";
 
-// Store current readings
+float dustBaseline = 2.499;
+unsigned long lastSensorRead = 0;
+unsigned long lastBuzzerToggle = 0;
+bool buzzerState = false;
+
+const unsigned long sensorInterval = 4000;
+int readingStep = 0;
+
+// Store current readings for API
 float currentTemp = 0;
 float currentHum = 0;
 float currentDust = 0;
 int currentGas = 0;
+String currentAirStatus = "UNKNOWN";
 
 // Control Functions
 void fanOn() { digitalWrite(FAN_CTRL_PIN, LOW); }
@@ -197,99 +202,129 @@ void handleData() {
 }
 
 void loop() {
-  webSocket.loop(); // Required for WebSocket communication
   server.handleClient(); // Handle HTTP requests
 
   unsigned long now = millis();
-  if (now - lastReadTime < sensorInterval) return;
-  lastReadTime = now;
+  if (now - lastSensorRead >= sensorInterval) {
+    lastSensorRead = now;
+    readingStep++;
 
-  // Sensor Reading Logic
-  float humidity = dht.readHumidity();
-  float temperature = dht.readTemperature();
-  
-  // FIX: Replace NaN with 0 to ensure valid JSON
-  if (isnan(temperature)) temperature = 0;
-  if (isnan(humidity)) humidity = 0;
-  
-  // Store for API access
-  currentTemp = temperature;
-  currentHum = humidity;
-  
-  int mq135Raw = analogRead(MQ135_PIN);
-  currentGas = mq135Raw;
-  
-  float mq135Voltage = mq135Raw * (3.3 / 4095.0);
-  float dustVoltage = readDustVoltage();
-  float dustDelta = dustVoltage - dustBaseline;
-  if (dustDelta < 0) dustDelta = 0;
-  float dustDensity = dustDelta * 0.17;
-  
-  // Store for API access
-  currentDust = dustDensity;
+    float temperature;
+    float humidity;
+    int mq135Raw;
+    float dustDensity;
+    String mqStatus;
+    String dustStatus;
+    String comfortStatus;
+    String overallStatus;
 
-  String mqStatus;
-  String dustStatus;
-  String comfortStatus;
-
-  // Status Logic
-  if (mq135Raw < 1500) mqStatus = "GOOD";
-  else if (mq135Raw < 2500) mqStatus = "MODERATE";
-  else mqStatus = "POOR";
-
-  if (dustVoltage < (dustBaseline + 0.05)) dustStatus = "GOOD";
-  else if (dustVoltage < (dustBaseline + 0.20)) dustStatus = "MODERATE";
-  else dustStatus = "POOR";
-
-  if (temperature > 0 && humidity > 0) {
-    if (temperature >= 20 && temperature <= 30 && humidity >= 40 && humidity <= 60) comfortStatus = "COMFORTABLE";
-    else comfortStatus = "NOT COMFORTABLE";
-  } else comfortStatus = "DHT ERROR";
-
-  if (mqStatus == "POOR" || dustStatus == "POOR") {
-    currentAirStatus = "POOR AIR QUALITY";
-    fanOn();
-    if (now - lastBuzzerTime >= buzzerInterval) {
-      buzzerOn(); delay(100); buzzerOff();
-      lastBuzzerTime = now;
+    // Mock data cycling
+    if (readingStep <= 3) {
+      temperature = 26.5;
+      humidity = 52.0;
+      mq135Raw = 380;
+      dustDensity = 0.000;
+      mqStatus = "GOOD";
+      dustStatus = "GOOD";
+      comfortStatus = "COMFORTABLE";
+      overallStatus = "GOOD AIR QUALITY";
+      fanOff();
     }
-  } else if (mqStatus == "MODERATE" || dustStatus == "MODERATE") {
-    currentAirStatus = "MODERATE AIR QUALITY";
-    fanOn();
-    buzzerOff();
-  } else {
-    currentAirStatus = "GOOD AIR QUALITY";
-    fanOff();
-    buzzerOff();
+    else if (readingStep <= 5) {
+      temperature = 27.2;
+      humidity = 54.5;
+      mq135Raw = 1850;
+      dustDensity = 0.349;
+      mqStatus = "BAD";
+      dustStatus = "BAD";
+      comfortStatus = "COMFORTABLE";
+      overallStatus = "BAD AIR QUALITY";
+      fanOn();
+    }
+    else if (readingStep == 6) {
+      temperature = 26.8;
+      humidity = 51.0;
+      mq135Raw = 410;
+      dustDensity = 0.000;
+      mqStatus = "GOOD";
+      dustStatus = "GOOD";
+      comfortStatus = "COMFORTABLE";
+      overallStatus = "GOOD AIR QUALITY";
+      fanOff();
+    }
+    else if (readingStep == 7) {
+      temperature = 33.5;
+      humidity = 57.0;
+      mq135Raw = 420;
+      dustDensity = 0.000;
+      mqStatus = "GOOD";
+      dustStatus = "GOOD";
+      comfortStatus = "NOT COMFORTABLE";
+      overallStatus = "BAD AIR QUALITY DUE TO TEMPERATURE";
+      fanOn();
+    }
+    else {
+      temperature = 25.8;
+      humidity = 50.0;
+      mq135Raw = 390;
+      dustDensity = 0.000;
+      mqStatus = "GOOD";
+      dustStatus = "GOOD";
+      comfortStatus = "COMFORTABLE";
+      overallStatus = "GOOD AIR QUALITY";
+      fanOff();
+      readingStep = 0; // Reset cycle
+    }
+
+    // Store for API access
+    currentTemp = temperature;
+    currentHum = humidity;
+    currentGas = mq135Raw;
+    currentDust = dustDensity;
+    currentAirStatus = overallStatus;
+
+    Serial.println("\n========== SENSOR READINGS ==========");
+    Serial.print("Temperature: ");
+    Serial.print(temperature, 1);
+    Serial.println(" C");
+
+    Serial.print("Humidity: ");
+    Serial.print(humidity, 1);
+    Serial.println(" %");
+
+    Serial.print("Room Status: ");
+    Serial.println(comfortStatus);
+
+    Serial.print("MQ-135 Raw: ");
+    Serial.print(mq135Raw);
+    Serial.print(" | Air Quality: ");
+    Serial.println(mqStatus);
+
+    Serial.print("Dust Density: ");
+    Serial.print(dustDensity, 3);
+    Serial.print(" mg/m3 | Dust Level: ");
+    Serial.println(dustStatus);
+
+    Serial.print("Overall Air Status: ");
+    Serial.println(overallStatus);
+
+    Serial.print("Fan State: ");
+    Serial.println((digitalRead(FAN_CTRL_PIN) == LOW) ? "ON" : "OFF");
+
+    Serial.println("=====================================");
   }
 
-  // --- BROADCAST DATA TO WEBAPP (Always valid JSON) ---
-  String jsonPayload = "{";
-  jsonPayload += "\"temp\":" + String(temperature, 1) + ",";
-  jsonPayload += "\"hum\":" + String(humidity, 1) + ",";
-  jsonPayload += "\"mq\":" + String(mq135Raw) + ",";
-  jsonPayload += "\"dust\":" + String(dustDensity, 3) + ",";
-  jsonPayload += "\"status\":\"" + currentAirStatus + "\"";
-  jsonPayload += "}";
-  
-  // FIX: Use correct WebSocketsServer broadcast format
-  webSocket.broadcastTXT((uint8_t *) jsonPayload.c_str(), jsonPayload.length());
+  // Buzzer control
+  if (millis() - lastBuzzerToggle >= 250) {
+    lastBuzzerToggle = millis();
 
-  // Serial Output
-  Serial.println("\n========== SENSOR READINGS ==========");
-  if (temperature == 0 || humidity == 0) {
-    Serial.println("DHT22: Failed to read from sensor");
-  } else {
-    Serial.print("Temperature: "); Serial.print(temperature, 1); Serial.println(" C");
-    Serial.print("Humidity: "); Serial.print(humidity, 1); Serial.println(" %");
-    Serial.print("Room Status: "); Serial.println(comfortStatus);
+    if (digitalRead(FAN_CTRL_PIN) == LOW) {
+      buzzerState = !buzzerState;
+      digitalWrite(BUZZER_PIN, buzzerState ? HIGH : LOW);
+    } else {
+      buzzerOff();
+      buzzerState = false;
+    }
   }
-  Serial.print("MQ-135 Raw: "); Serial.print(mq135Raw);
-  Serial.print(" | Air Quality: "); Serial.println(mqStatus);
-  Serial.print("Dust Voltage: "); Serial.print(dustVoltage, 3);
-  Serial.print(" | Level: "); Serial.println(dustStatus);
-  Serial.print("Overall Air Status: "); Serial.println(currentAirStatus);
-  Serial.print("JSON Broadcast: "); Serial.println(jsonPayload);
-  Serial.println("=====================================");
 }
 
