@@ -27,10 +27,6 @@ const char* password = "DIC@2026";
 #define FAN_CTRL_PIN 18
 #define BUZZER_PIN 23
 
-// WiFi Credentials
-const char* ssid = "DIC2026 - 1350";
-const char* password = "DIC@2026";
-
 DHT dht(DHTPIN, DHTTYPE);
 WebServer server(80);  // HTTP server on port 80
 
@@ -119,17 +115,13 @@ void setup() {
     return;
   }
 
-  // --- WebSocket Setup ---
-  webSocket.begin();
-  Serial.println("5. WebSocket ready (port 81)");
-
   // --- HTTP Server Setup ---
   server.on("/", handleRoot);
   server.on("/api/data", handleData);
   server.on("/api/data", HTTP_OPTIONS, handleCORS);  // Preflight CORS request
   server.on("/", HTTP_OPTIONS, handleCORS);           // Preflight CORS for root
   server.begin();
-  Serial.println("6. HTTP server ready (port 80)");
+  Serial.println("4. HTTP server ready (port 80)");
 
   Serial.println("\n========== SUCCESS ==========");
   Serial.print("OPEN BROWSER: http://");
