@@ -8,6 +8,10 @@ Asthma Guard is an IoT-based air quality monitoring device that tracks temperatu
 
 **Status:** ✅ Fully operational with local and cloud dashboards
 
+## 📸 Final Prototype
+
+![Final Prototype](Images/Final%20Prototype.jpeg)
+
 ---
 
 ## 🔧 Hardware Requirements
