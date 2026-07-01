@@ -16,7 +16,7 @@ const THRESHOLDS = {
 function initChart() {
   const ctx = document.getElementById('pmChart').getContext('2d');
   return new Chart(ctx, {
-    type: 'line',
+    type: 'line',   
     data: {
       labels: [],
       datasets: [{
